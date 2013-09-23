@@ -20,7 +20,7 @@
  *
  */
 
-/* circulation transaction process */
+/* handbook transaction process */
 
 // key to authenticate
 if (!defined('INDEX_AUTH')) {
@@ -38,59 +38,59 @@ if (!defined('DIRECT_INCLUDE')) {
 // IP based access limitation
 require LIB_DIR.'ip_based_access.inc.php';
 do_checkIP('smc');
-do_checkIP('smc-circulation');
+do_checkIP('smc-handbook');
 require SENAYAN_BASE_DIR.'admin/default/session_check.inc.php';
 require SIMBIO_BASE_DIR.'simbio_DB/simbio_dbop.inc.php';
 require SIMBIO_BASE_DIR.'simbio_UTILS/simbio_date.inc.php';
-require MODULES_BASE_DIR.'membership/member_base_lib.inc.php';
-require MODULES_BASE_DIR.'circulation/circulation_base_lib.inc.php';
-
+require MODULES_BASE_DIR.'handbook/hb_member_base_lib.inc.php';
+require MODULES_BASE_DIR.'handbook/handbook_base_lib.inc.php';
+print_r($_SESSION);
 // transaction is finished
-if (isset($_POST['finish'])) {
-    // create circulation object
-    $memberID = $_SESSION['memberID'];
-    $circulation = new circulation($dbs, $memberID);
+if (isset($_POST['hb_finish'])) {
+    // create handbook object
+    $memberID = $_SESSION['hb_memberID'];
+    $handbook = new handbook($dbs, $memberID);
     // finish loan transaction
-    $flush = $circulation->finishLoanSession();
+    $flush = $handbook->finishLoanSession();
     if ($flush == TRANS_FLUSH_ERROR) {
         // write log
-        utility::writeLogs($dbs, 'member', $memberID, 'circulation', 'ERROR : '.$_SESSION['realname'].' FAILED finish circulation transaction with member ('.$memberID.')');
+        utility::writeLogs($dbs, 'member', $memberID, 'handbook', 'ERROR : '.$_SESSION['realname'].' FAILED finish Handbook circulation transaction with member ('.$memberID.')');
         echo '<script type="text/javascript">';
-        echo 'alert(\''.__('ERROR! Loan data can\'t be saved to database').'\');';
+        echo 'alert(\''.__('ERROR! Handbook Loan data can\'t be saved to database').'\');';
         echo '</script>';
     } else {
         // write log
-        utility::writeLogs($dbs, 'member', $memberID, 'circulation', $_SESSION['realname'].' finish circulation transaction with member ('.$memberID.')');
+        utility::writeLogs($dbs, 'member', $memberID, 'handbook', $_SESSION['realname'].' finish Handbook circulation transaction with member ('.$memberID.')');
         // send message
         echo '<script type="text/javascript">';
         if ($sysconf['transaction_finished_notification']) {
-            echo 'alert(\''.__('Transaction finished').'\');';
+            echo 'alert(\''.__('Handbook Transaction finished').'\');';
         }
         // print receipt only if enabled and $_SESSION['receipt_record'] not empty
-        if ($sysconf['circulation_receipt'] && isset($_SESSION['receipt_record'])) {
+        if ($sysconf['hb_circulation_receipt'] && isset($_SESSION['hb_receipt_record'])) {
             // open receipt windows
-            echo 'parent.openWin(\''.MODULES_WEB_ROOT_DIR.'circulation/pop_loan_receipt.php\', \'popReceipt\', 350, 500, true);';
+            echo 'parent.openWin(\''.MODULES_WEB_ROOT_DIR.'handbook/pop_handbook_receipt.php\', \'popReceipt\', 350, 500, true);';
         }
-        echo 'parent.$(\'#mainContent\').simbioAJAX(\''.MODULES_WEB_ROOT_DIR.'circulation/index.php\', {method: \'post\', addData: \'finishID='.$memberID.'\'});';
+        echo 'parent.$(\'#mainContent\').simbioAJAX(\''.MODULES_WEB_ROOT_DIR.'handbook/index.php\', {method: \'post\', addData: \'hb_finishID='.$memberID.'\'});';
         echo '</script>';
     }
     exit();
 }
 
-
+/* AMR 2013
 // return and extend process
 if (isset($_POST['process']) AND isset($_POST['loanID'])) {
     $loanID = intval($_POST['loanID']);
     // get loan data
     $loan_q = $dbs->query('SELECT item_code FROM loan WHERE loan_id='.$loanID);
     $loan_d = $loan_q->fetch_row();
-    // create circulation object
-    $circulation = new circulation($dbs, $_SESSION['memberID']);
-    $circulation->ignore_holidays_fine_calc = $sysconf['ignore_holidays_fine_calc'];
-	$circulation->holiday_dayname = $_SESSION['holiday_dayname'];
-	$circulation->holiday_date = $_SESSION['holiday_date'];
+    // create handbook object
+    $handbook = new handbook($dbs, $_SESSION['memberID']);
+    $handbook->ignore_holidays_fine_calc = $sysconf['ignore_holidays_fine_calc'];
+	$handbook->holiday_dayname = $_SESSION['holiday_dayname'];
+	$handbook->holiday_date = $_SESSION['holiday_date'];
     if ($_POST['process'] == 'return') {
-        $return_status = $circulation->returnItem($loanID);
+        $return_status = $handbook->returnItem($loanID);
         // write log
         utility::writeLogs($dbs, 'member', $_SESSION['memberID'], 'circulation', $_SESSION['realname'].' return item '.$loan_d[0].' for member ('.$_SESSION['memberID'].')');
         echo '<script type="text/javascript">';
@@ -126,22 +126,22 @@ if (isset($_POST['process']) AND isset($_POST['loanID'])) {
     exit();
 }
 
-
+*/
 // add temporary item to session
-if (isset($_POST['tempLoanID'])) {
-    // create circulation object
-    $circulation = new circulation($dbs, $_SESSION['memberID']);
+if (isset($_POST['hb_tempLoanID'])) {
+    // create handbook object
+    $handbook = new handbook($dbs, $_SESSION['hb_memberID']);
     // set holiday settings
-    $circulation->holiday_dayname = $_SESSION['holiday_dayname'];
-    $circulation->holiday_date = $_SESSION['holiday_date'];
+    $handbook->holiday_dayname = $_SESSION['holiday_dayname'];
+    $handbook->holiday_date = $_SESSION['holiday_date'];
     // add item to loan session
-    $add = $circulation->addLoanSession($_POST['tempLoanID']);
+    $add = $handbook->addLoanSession($_POST['hb_tempLoanID']);
     if ($add == LOAN_LIMIT_REACHED) {
         echo '<html>';
         echo '<body>';
         if ($sysconf['loan_limit_override']) {
             // hidden form holding item code
-            echo '<form method="post" name="overrideForm" action="'.MODULES_WEB_ROOT_DIR.'circulation/circulation_action.php"><input type="hidden" name="overrideID" value="'.$_POST['tempLoanID'].'" /></form>';
+            echo '<form method="post" name="overrideForm" action="'.MODULES_WEB_ROOT_DIR.'handbook/handbook_action.php"><input type="hidden" name="overrideID" value="'.$_POST['hb_tempLoanID'].'" /></form>';
             echo '<script type="text/javascript">';
             echo 'var confOverride = confirm(\''.__('Loan Limit Reached!').'\' + "\n" + \''.__('Do You Want To Overide This?').'\');';
             echo 'if (confOverride) { ';
@@ -161,8 +161,8 @@ if (isset($_POST['tempLoanID'])) {
         // hidden form holding item code
         echo '<html>';
         echo '<body>';
-        echo '<form method="post" name="overrideForm" action="'.MODULES_WEB_ROOT_DIR.'circulation/circulation_action.php">';
-        echo '<input type="hidden" name="overrideID" value="'.$_POST['tempLoanID'].'" /></form>';
+        echo '<form method="post" name="overrideForm" action="'.MODULES_WEB_ROOT_DIR.'handbook/handbook_action.php">';
+        echo '<input type="hidden" name="overrideID" value="'.$_POST['hb_tempLoanID'].'" /></form>';
         echo '<script type="text/javascript">';
         echo 'var confOverride = confirm(\''.__('WARNING! This Item is reserved by another member').'\' + "\n" + \''.__('Do You Want To Overide This?').'\');';
         echo 'if (confOverride) { ';
@@ -204,7 +204,7 @@ if (isset($_POST['tempLoanID'])) {
     }
     exit();
 }
-
+/*
 
 // loan limit override
 if (isset($_POST['overrideID']) AND !empty($_POST['overrideID'])) {
@@ -222,23 +222,23 @@ if (isset($_POST['overrideID']) AND !empty($_POST['overrideID'])) {
     echo '</script>';
     exit();
 }
-
+*/
 
 // remove temporary item session
-if (isset($_GET['removeID'])) {
+if (isset($_GET['hb_removeID'])) {
     // create circulation object
-    $circulation = new circulation($dbs, $_SESSION['memberID']);
+    $handbook = new handbook($dbs, $_SESSION['hb_memberID']);
     // remove item from loan session
-    $circulation->removeLoanSession($_GET['removeID']);
+    $handbook->removeLoanSession($_GET['hb_removeID']);
     echo '<script type="text/javascript">';
-    $msg = str_replace('{removeID}', $_GET['removeID'], __('Item {removeID} removed from session')); //mfc
+    $msg = str_replace('{removeID}', $_GET['hb_removeID'], __('Item {removeID} removed from session')); //mfc
     echo 'alert(\''.$msg.'\');';
     echo 'location.href = \'loan.php\';';
     echo '</script>';
     exit();
 }
 
-
+/*
 // quick return proccess
 if (isset($_POST['quickReturnID']) AND $_POST['quickReturnID']) {
     // get loan data
@@ -256,12 +256,12 @@ if (isset($_POST['quickReturnID']) AND $_POST['quickReturnID']) {
         // create circulation object
         $circulation = new circulation($dbs, $loan_d['member_id']);
         
-        /* modified by Indra Sutriadi */
+        /* modified by Indra Sutriadi */ /* AMR 2013
         $circulation->ignore_holidays_fine_calc = $sysconf['ignore_holidays_fine_calc'];
         $circulation->holiday_dayname = $_SESSION['holiday_dayname'];
         $circulation->holiday_date = $_SESSION['holiday_date'];
         /* end of modification */
-        
+        /* AMR 2013
         // check for overdue
         $overdue = $circulation->countOverdueValue($loan_d['loan_id'], $return_date);
         // check overdue
@@ -411,46 +411,46 @@ if (isset($_POST['removeFines'])) {
     echo '</script>';
     exit();
 }
-
+AMR 2013 */
 
 // transaction is started
-if (isset($_POST['memberID']) OR isset($_SESSION['memberID'])) {
+if (isset($_POST['hb_memberID']) OR isset($_SESSION['hb_memberID'])) {
     // create member object
     // if there is already member ID session
-    if (isset($_SESSION['memberID'])) {
-        $memberID = trim($_SESSION['memberID']);
+    if (isset($_SESSION['hb_memberID'])) {
+        $memberID = trim($_SESSION['hb_memberID']);
     } else {
         // new transaction proccess
         // clear previous sessions
-        $_SESSION['temp_loan'] = array();
-        $memberID = trim(preg_replace('@\s*(<.+)$@i', '', $_POST['memberID']));
+        $_SESSION['hb_temp_loan'] = array();
+        $memberID = trim(preg_replace('@\s*(<.+)$@i', '', $_POST['hb_memberID']));
         // write log
-        utility::writeLogs($dbs, 'member', $memberID, 'circulation', $_SESSION['realname'].' start transaction with member ('.$memberID.')');
+        utility::writeLogs($dbs, 'member', $memberID, 'handbook', $_SESSION['realname'].' start Handbook transaction with member ('.$memberID.')');
     }
-    $member = new member($dbs, $memberID);
+    $member = new hb_member($dbs, $memberID); // AMR 2013 perlu dibuat untuk yang hanya bisa buku pegangan saja
     if (!$member->valid()) {
         # echo '<div class="errorBox">Member ID '.$memberID.' not valid (unregistered in database)</div>';
-        echo '<div class="errorBox">'.__('Member ID').' '.$memberID.' '.__(' not valid (unregistered in database)').'</div>'; //mfc
+        echo '<div class="errorBox">'.__('Member ID').' '.$memberID.' '.__(' not registered for Handbook Circulation').'</div>'; //mfc
     } else {
         // get member information
         $member_type_d = $member->getMemberTypeProp();
         // member type ID
-        $_SESSION['memberTypeID'] = $member->member_type_id;
+        $_SESSION['hb_memberTypeID'] = $member->member_type_id;
         // save member ID to the sessions
-        $_SESSION['memberID'] = $member->member_id;
+        $_SESSION['hb_memberID'] = $member->member_id;
         // create renewed/reborrow session array
-        $_SESSION['reborrowed'] = array();
+        $_SESSION['hb_reborrowed'] = array();
         // check membership expire
-        $_SESSION['is_expire'] = $member->isExpired();
+        $_SESSION['hb_is_expire'] = $member->isExpired();
         // check if membership is blacklisted
-        $_SESSION['is_pending'] = $member->isPending();
+        $_SESSION['hb_is_pending'] = $member->isPending();
         // print record
-        $_SESSION['receipt_record'] = array();
+        $_SESSION['hb_receipt_record'] = array();
         // set HTML buttons disable flag
         $disabled = '';
         $add_style = '';
         // check for expire date and pending state
-        if ($_SESSION['is_expire'] OR $_SESSION['is_pending']) {
+        if ($_SESSION['hb_is_expire'] OR $_SESSION['hb_is_pending']) {
             $disabled = ' disabled ';
             $add_style = ' disabled';
         }
@@ -459,7 +459,7 @@ if (isset($_POST['memberID']) OR isset($_SESSION['memberID'])) {
         echo '<tr>'."\n";
         echo '<td class="dataListHeader" colspan="5">';
         // hidden form for transaction finish
-        echo '<form id="finishForm" method="post" target="blindSubmit" action="'.MODULES_WEB_ROOT_DIR.'circulation/circulation_action.php" style="display: inline;"><input type="button" accesskey="T" value="'.__('Finish Transaction').' (T)" onclick="confSubmit(\'finishForm\', \''.__('Are you sure want to finish current transaction?').'\')" /><input type="hidden" name="finish" value="true" /></form>';
+        echo '<form id="finishForm" method="post" target="blindSubmit" action="'.MODULES_WEB_ROOT_DIR.'handbook/handbook_action.php" style="display: inline;"><input type="button" accesskey="T" value="'.__('Finish Transaction').' (T)" onclick="confSubmit(\'finishForm\', \''.__('Are you sure want to finish current Handbook transaction?').'\')" /><input type="hidden" name="hb_finish" value="true" /></form>';
         echo '</td>';
         echo '</tr>'."\n";
         echo '<tr>'."\n";
@@ -482,34 +482,34 @@ if (isset($_POST['memberID']) OR isset($_SESSION['memberID'])) {
         echo '<td class="alterCell" width="15%"><strong>'.__('Register Date').'</strong></td><td class="alterCell2" width="30%">'.$member->register_date.'</td>';
         // give notification about expired membership and pending
         $expire_msg = '';
-        if ($_SESSION['is_expire']) {
+        if ($_SESSION['hb_is_expire']) {
             $expire_msg .= '<span class="error">('.__('Membership Already Expired').')</span>';
         }
         echo '<td class="alterCell" width="15%"><strong>'.__('Expiry Date').'</strong></td><td class="alterCell2" width="30%">'.$member->expire_date.' '.$expire_msg.'</td>';
         echo '</tr>'."\n";
         // member notes and pending information
-        if (!empty($member->member_notes) OR $_SESSION['is_pending']) {
+        if (!empty($member->member_notes) OR $_SESSION['hb_is_pending']) {
           echo '<tr>'."\n";
           echo '<td class="alterCell" width="15%"><strong>Notes</strong></td><td class="alterCell2" colspan="4">';
           if ($member->member_notes) {
               echo '<div>'.$member->member_notes.'</div>';
           }
-          if ($_SESSION['is_pending']) {
-              echo '<div class="error">('.__('Membership currently in pending state, loan transaction is locked.').')</div>';
+          if ($_SESSION['hb_is_pending']) {
+              echo '<div class="error">('.__('Membership currently in pending state, handbook transaction is locked.').')</div>';
           }
           echo '</td>';
           echo '</tr>'."\n";
         }
         echo '</table>'."\n";
         // tab and iframe
-        echo '<input type="button" accesskey="L" style="width: 19%;" class="tab'.$add_style.'" value="'.__('Loans').' (L)" src="'.MODULES_WEB_ROOT_DIR.'circulation/loan.php" '.$disabled.' />';
-        echo '<input type="button" accesskey="C" style="width: 19%;" class="tab tabSelected" value="'.__('Current Loans').' (C)" src="'.MODULES_WEB_ROOT_DIR.'circulation/loan_list.php" />';
+        echo '<input type="button" accesskey="L" style="width: 19%;" class="tab'.$add_style.'" value="'.__('Loans').' (L)" src="'.MODULES_WEB_ROOT_DIR.'handbook/loan.php" '.$disabled.' />';
+        echo '<input type="button" accesskey="C" style="width: 19%;" class="tab tabSelected" value="'.__('Current Loans').' (C)" src="'.MODULES_WEB_ROOT_DIR.'handbook/loan_list.php" />';
         if ($member_type_d['enable_reserve']) {
-          echo '<input type="button" accesskey="R" style="width: 19%;" class="tab'.$add_style.'" value="'.__('Reserve').' (R)" src="'.MODULES_WEB_ROOT_DIR.'circulation/reserve_list.php" '.$disabled.' />';
+          echo '<input type="button" accesskey="R" style="width: 19%;" class="tab'.$add_style.'" value="'.__('Reserve').' (R)" src="'.MODULES_WEB_ROOT_DIR.'handbook/reserve_list.php" '.$disabled.' />';
         }
-        echo '<input type="button" accesskey="F" style="width: 19%;" class="tab" value="'.__('Fines').' (F)" src="'.MODULES_WEB_ROOT_DIR.'circulation/fines_list.php" />';
-        echo '<input type="button" accesskey="H" style="width: 19%;" class="tab" value="'.__('Loan History').' (H)" src="'.MODULES_WEB_ROOT_DIR.'circulation/member_loan_hist.php" /><br />'."\n";
-        echo '<iframe src="modules/circulation/loan_list.php" id="listsFrame" class="expandable border"></iframe>'."\n";
+        echo '<input type="button" accesskey="F" style="width: 19%;" class="tab" value="'.__('Fines').' (F)" src="'.MODULES_WEB_ROOT_DIR.'handbook/fines_list.php" />';
+        echo '<input type="button" accesskey="H" style="width: 19%;" class="tab" value="'.__('Loan History').' (H)" src="'.MODULES_WEB_ROOT_DIR.'handbook/member_loan_hist.php" /><br />'."\n";
+        echo '<iframe src="modules/handbook/loan_list.php" id="listsFrame" class="expandable border"></iframe>'."\n";
     }
     exit();
 }

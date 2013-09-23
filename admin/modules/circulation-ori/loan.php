@@ -31,20 +31,20 @@ require '../../../sysconfig.inc.php';
 // IP based access limitation
 require LIB_DIR.'ip_based_access.inc.php';
 do_checkIP('smc');
-do_checkIP('smc-handbook');
+do_checkIP('smc-circulation');
 // start the session
 require SENAYAN_BASE_DIR.'admin/default/session.inc.php';
 require SENAYAN_BASE_DIR.'admin/default/session_check.inc.php';
 
 // privileges checking
-$can_read = utility::havePrivilege('handbook', 'r');
-$can_write = utility::havePrivilege('handbook', 'w');
+$can_read = utility::havePrivilege('circulation', 'r');
+$can_write = utility::havePrivilege('circulation', 'w');
 
 if (!($can_read AND $can_write)) {
     die('<div class="errorBox">'.__('You don\'t have enough privileges to view this section').'</div>');
 }
 
-if (!isset($_SESSION['hb_memberID'])) { die(); }
+if (!isset($_SESSION['memberID'])) { die(); }
 
 require SIMBIO_BASE_DIR.'simbio_GUI/table/simbio_table.inc.php';
 require SIMBIO_BASE_DIR.'simbio_UTILS/simbio_date.inc.php';
@@ -92,7 +92,7 @@ var changeLoanDate = function(intLoanID, strDateToChange, dateElement, strDate)
     var dateData = {newLoanDate: strDate, loanSessionID: intLoanID};
     var dateText = $('.'+strDateToChange+'[data='+intLoanID+']');
     if (strDateToChange == 'due') { dateData = {newDueDate: strDate, loanSessionID: intLoanID}; }
-    jQuery.ajax({url: '<?php echo MODULES_WEB_ROOT_DIR.'handbook/loan_date_AJAX_change.php'; ?>', type: 'POST',
+    jQuery.ajax({url: '<?php echo MODULES_WEB_ROOT_DIR.'circulation/loan_date_AJAX_change.php'; ?>', type: 'POST',
         data: dateData,
         dataType: 'json',
         success: function(ajaxRespond) {
@@ -116,23 +116,22 @@ $js = ob_get_clean();
 // start the output buffering
 ob_start();
 // check if there is member ID
-if (isset($_SESSION['hb_memberID'])) {
-    $memberID = trim($_SESSION['hb_memberID']);
+if (isset($_SESSION['memberID'])) {
+    $memberID = trim($_SESSION['memberID']);
     ?>
     <!--item loan form-->
     <div style="padding: 5px; background: #ccc;">
-        <form name="itemLoan" id="loanForm" action="handbook_action.php" method="post" style="display: inline;">
+        <form name="itemLoan" id="loanForm" action="circulation_action.php" method="post" style="display: inline;">
             <?php echo __('Insert Item Code/Barcode'); ?> :
-            <input type="text" id="tempLoanID" name="hb_tempLoanID" />
+            <input type="text" id="tempLoanID" name="tempLoanID" />
             <input type="submit" value="<?php echo __('Loan'); ?>" class="button" />
         </form>
     </div>
     <script type="text/javascript">$('#tempLoanID').focus();</script>
     <!--item loan form end-->
     <?php
-    
     // make a list of temporary loan if there is any
-    if (count($_SESSION['hb_temp_loan']) > 0) {
+    if (count($_SESSION['temp_loan']) > 0) {
         // create table object
         $temp_loan_list = new simbio_table();
         $temp_loan_list->table_attr = "align='center' style='width: 100%;' cellpadding='3' cellspacing='0'";
@@ -143,12 +142,12 @@ if (isset($_SESSION['hb_memberID'])) {
         $temp_loan_list->setHeader($headers);
         // row number init
         $row = 1;
-        foreach ($_SESSION['hb_temp_loan'] as $_loan_ID => $temp_loan_list_d) {
+        foreach ($_SESSION['temp_loan'] as $_loan_ID => $temp_loan_list_d) {
             // alternate the row color
             $row_class = ($row%2 == 0)?'alterCell':'alterCell2';
 
             // remove link
-            $remove_link = '<a href="handbook_action.php?hb_removeID='.$temp_loan_list_d['item_code'].'" title="Remove this item" class="trashLink">&nbsp;</a>';
+            $remove_link = '<a href="circulation_action.php?removeID='.$temp_loan_list_d['item_code'].'" title="Remove this item" class="trashLink">&nbsp;</a>';
 
             // check if manually changes loan and due date allowed
             if ($sysconf['allow_loan_date_change']) {
